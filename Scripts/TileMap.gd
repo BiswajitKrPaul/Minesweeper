@@ -9,6 +9,7 @@ const layer_id: int = 0
 const source_id: int = 0
 
 var gameOver: bool = false
+var mineTappedIndex: int = -10
 
 var mines_coordinate: Array[Vector2]
 var flag_coordinates: Array[Vector2i]
@@ -38,6 +39,7 @@ func _ready():
 
 func _restart() -> void:
 	on_game_over(false)
+	mineTappedIndex = -10
 	mines_coordinate.clear()
 	flag_coordinates.clear()
 	scale = Vector2(2.5, 2.5)
@@ -52,6 +54,12 @@ func _process(_delta):
 
 func on_game_over(isGameOver: bool):
 	gameOver = isGameOver
+	print("Game Over")
+	print(str(mines_coordinate.size()))
+	for i in mines_coordinate.size():
+		if mineTappedIndex != i:
+			erase_cell(layer_id, Vector2(mines_coordinate[i].x, mines_coordinate[i].y))
+			set_tile_cell(Vector2(mines_coordinate[i].x, mines_coordinate[i].y), cell_map["mine"])
 
 
 func on_mouse_click() -> void:
@@ -64,8 +72,19 @@ func on_mouse_click() -> void:
 			if (coor.x >= -4 || coor.x <= 3) && (coor.y <= 3 || coor.y <= -4):
 				if get_cell_tile_data(layer_id, coor).get_custom_data("has_mine") == true:
 					erase_cell(layer_id, coor)
-					set_tile_cell(coor, cell_map["mine"])
+					set_tile_cell(coor, cell_map["mine_tapped"])
+					mineTappedIndex = mines_coordinate.find(Vector2(coor.x, coor.y))
+					print(str(mineTappedIndex))
 					on_game_over(true)
+				else:
+					if flag_coordinates.has(coor):
+						return
+					elif mines_coordinate.has(Vector2(coor.x, coor.y)):
+						return
+					else:
+						erase_cell(layer_id, coor)
+						set_tile_cell(coor, cell_map["blank"])
+
 	if Input.is_action_just_pressed("on_right_click"):
 		var coor: Vector2i = map.local_to_map(get_local_mouse_position())
 		if map.get_cell_atlas_coords(layer_id, coor) != Vector2i(-1, -1):
