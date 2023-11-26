@@ -14,6 +14,8 @@ var mineTappedIndex: int = -10
 var mines_coordinate: Array[Vector2]
 var flag_coordinates: Array[Vector2i]
 
+var number_map = {}
+
 var cell_map = {
 	"1": Vector2i(0, 0),
 	"2": Vector2i(1, 0),
@@ -42,10 +44,13 @@ func _restart() -> void:
 	mineTappedIndex = -10
 	mines_coordinate.clear()
 	flag_coordinates.clear()
+	number_map.clear()
 	scale = Vector2(2.5, 2.5)
 	build_map()
 	place_mines()
+	_place_map_numbers()
 	print(mines_coordinate)
+	print(number_map)
 
 
 func _process(_delta):
@@ -54,8 +59,6 @@ func _process(_delta):
 
 func on_game_over(isGameOver: bool):
 	gameOver = isGameOver
-	print("Game Over")
-	print(str(mines_coordinate.size()))
 	for i in mines_coordinate.size():
 		if mineTappedIndex != i:
 			erase_cell(layer_id, Vector2(mines_coordinate[i].x, mines_coordinate[i].y))
@@ -67,14 +70,14 @@ func on_mouse_click() -> void:
 		return
 	if Input.is_action_just_pressed("on_tap"):
 		var coor: Vector2i = map.local_to_map(get_local_mouse_position())
+		print(str(coor))
 		# //Checking if the mouse clicked outside the map or not
 		if map.get_cell_atlas_coords(layer_id, coor) != Vector2i(-1, -1):
-			if (coor.x >= -4 || coor.x <= 3) && (coor.y <= 3 || coor.y <= -4):
+			if (coor.x >= -4 || coor.x <= 3) && (coor.y <= 3 || coor.y >= -4):
 				if get_cell_tile_data(layer_id, coor).get_custom_data("has_mine") == true:
 					erase_cell(layer_id, coor)
 					set_tile_cell(coor, cell_map["mine_tapped"])
 					mineTappedIndex = mines_coordinate.find(Vector2(coor.x, coor.y))
-					print(str(mineTappedIndex))
 					on_game_over(true)
 				else:
 					if flag_coordinates.has(coor):
@@ -83,12 +86,43 @@ func on_mouse_click() -> void:
 						return
 					else:
 						erase_cell(layer_id, coor)
-						set_tile_cell(coor, cell_map["blank"])
+						if number_map.has(coor):
+							match number_map[coor]:
+								1:
+									erase_cell(layer_id, coor)
+									set_tile_cell(coor, cell_map["1"])
+								2:
+									erase_cell(layer_id, coor)
+									set_tile_cell(coor, cell_map["2"])
+								3:
+									erase_cell(layer_id, coor)
+									set_tile_cell(coor, cell_map["3"])
+								4:
+									erase_cell(layer_id, coor)
+									set_tile_cell(coor, cell_map["4"])
+								5:
+									erase_cell(layer_id, coor)
+									set_tile_cell(coor, cell_map["5"])
+								6:
+									erase_cell(layer_id, coor)
+									set_tile_cell(coor, cell_map["6"])
+								7:
+									erase_cell(layer_id, coor)
+									set_tile_cell(coor, cell_map["7"])
+								8:
+									erase_cell(layer_id, coor)
+									set_tile_cell(coor, cell_map["8"])
+								_:
+									erase_cell(layer_id, coor)
+									set_tile_cell(coor, cell_map["blank"])
+						else:
+							erase_cell(layer_id, coor)
+							set_tile_cell(coor, cell_map["blank"])
 
 	if Input.is_action_just_pressed("on_right_click"):
 		var coor: Vector2i = map.local_to_map(get_local_mouse_position())
 		if map.get_cell_atlas_coords(layer_id, coor) != Vector2i(-1, -1):
-			if (coor.x >= -4 || coor.x <= 3) && (coor.y <= 3 || coor.y <= -4):
+			if (coor.x >= -4 || coor.x <= 3) && (coor.y <= 3 || coor.y >= -4):
 				if (
 					map.get_cell_atlas_coords(layer_id, coor) == cell_map["default"]
 					|| map.get_cell_atlas_coords(layer_id, coor) == cell_map["flag"]
@@ -130,6 +164,87 @@ func place_mines() -> void:
 		mines_coordinate.append(random_mine_coordinate)
 		erase_cell(layer_id, random_mine_coordinate)
 		set_cell(layer_id, random_mine_coordinate, source_id, cell_map["default"], 1)
+
+
+func _place_map_numbers() -> void:
+	for i in mines_coordinate.size():
+		var temp_mine_coordinate: Vector2 = mines_coordinate[i]
+		if (
+			(temp_mine_coordinate.x - 1 >= -4 || temp_mine_coordinate.x + 1 <= 3)
+			&& (temp_mine_coordinate.y + 1 <= 3 || temp_mine_coordinate.y - 1 >= -4)
+		):
+			var mine_place_coor = Vector2i(temp_mine_coordinate)
+			# mine right side
+			if number_map.has(mine_place_coor + Vector2i.RIGHT):
+				number_map[mine_place_coor + Vector2i.RIGHT] = (
+					number_map[mine_place_coor + Vector2i.RIGHT] + 1
+				)
+
+			else:
+				number_map[mine_place_coor + Vector2i.RIGHT] = 1
+
+			#mine left side
+			if number_map.has(mine_place_coor + Vector2i.LEFT):
+				number_map[mine_place_coor + Vector2i.LEFT] = (
+					number_map[mine_place_coor + Vector2i.LEFT] + 1
+				)
+
+			else:
+				number_map[mine_place_coor + Vector2i.LEFT] = 1
+
+			# mine Up side
+			if number_map.has(mine_place_coor + Vector2i.UP):
+				number_map[mine_place_coor + Vector2i.UP] = (
+					number_map[mine_place_coor + Vector2i.UP] + 1
+				)
+
+			else:
+				number_map[mine_place_coor + Vector2i.UP] = 1
+
+			# mine Down side
+			if number_map.has(mine_place_coor + Vector2i.DOWN):
+				number_map[mine_place_coor + Vector2i.DOWN] = (
+					number_map[mine_place_coor + Vector2i.DOWN] + 1
+				)
+
+			else:
+				number_map[mine_place_coor + Vector2i.DOWN] = 1
+
+			# mine right up diagonal
+			if number_map.has(Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)):
+				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)] = (
+					number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)] + 1
+				)
+
+			else:
+				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)] = 1
+
+			# mine right down diagonal
+			if number_map.has(Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)):
+				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)] = (
+					number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)] + 1
+				)
+
+			else:
+				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)] = 1
+
+			# mine left up diagonal
+			if number_map.has(Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)):
+				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)] = (
+					number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)] + 1
+				)
+
+			else:
+				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)] = 1
+
+			# mine left down diagonal
+			if number_map.has(Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)):
+				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)] = (
+					number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)] + 1
+				)
+
+			else:
+				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)] = 1
 
 
 func _on_button_pressed():
