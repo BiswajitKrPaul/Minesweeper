@@ -1,7 +1,7 @@
 extends TileMap
 
-@export var rows: int = 8
-@export var columns: int = 8
+@export var rows: int = 9
+@export var columns: int = 9
 @export var no_of_mines: int = 10
 @onready var map: TileMap = %Map
 
@@ -10,9 +10,12 @@ const source_id: int = 0
 
 var gameOver: bool = false
 var mineTappedIndex: int = -10
+var clickedOnce: bool = false
 
 var mines_coordinate: Array[Vector2]
 var flag_coordinates: Array[Vector2i]
+var tapped_coordinates: Array[Vector2i]
+var first_click_coordinate: Vector2i
 
 var number_map = {}
 
@@ -41,16 +44,15 @@ func _ready():
 
 func _restart() -> void:
 	on_game_over(false)
+	clickedOnce = false
+	first_click_coordinate = Vector2i(-100, -100)
 	mineTappedIndex = -10
 	mines_coordinate.clear()
 	flag_coordinates.clear()
+	tapped_coordinates.clear()
 	number_map.clear()
-	scale = Vector2(2.5, 2.5)
+	scale = Vector2(1.5, 1.5)
 	build_map()
-	place_mines()
-	_place_map_numbers()
-	print(mines_coordinate)
-	print(number_map)
 
 
 func _process(_delta):
@@ -69,11 +71,18 @@ func on_mouse_click() -> void:
 	if gameOver == true:
 		return
 	if Input.is_action_just_pressed("on_tap"):
+		if clickedOnce == false:
+			first_click_coordinate = map.local_to_map(get_local_mouse_position())
+			place_mines()
+			clickedOnce = true
+			if !number_map.has(first_click_coordinate):
+				flood_mines(first_click_coordinate)
+
 		var coor: Vector2i = map.local_to_map(get_local_mouse_position())
-		print(str(coor))
 		# //Checking if the mouse clicked outside the map or not
 		if map.get_cell_atlas_coords(layer_id, coor) != Vector2i(-1, -1):
-			if (coor.x >= -4 || coor.x <= 3) && (coor.y <= 3 || coor.y >= -4):
+			if is_valid_coordinate(coor) and not tapped_coordinates.has(coor):
+				tapped_coordinates.append(coor)
 				if get_cell_tile_data(layer_id, coor).get_custom_data("has_mine") == true:
 					erase_cell(layer_id, coor)
 					set_tile_cell(coor, cell_map["mine_tapped"])
@@ -115,29 +124,118 @@ func on_mouse_click() -> void:
 								_:
 									erase_cell(layer_id, coor)
 									set_tile_cell(coor, cell_map["blank"])
+
 						else:
 							erase_cell(layer_id, coor)
 							set_tile_cell(coor, cell_map["blank"])
+							flood_mines(coor)
 
 	if Input.is_action_just_pressed("on_right_click"):
 		var coor: Vector2i = map.local_to_map(get_local_mouse_position())
 		if map.get_cell_atlas_coords(layer_id, coor) != Vector2i(-1, -1):
-			if (coor.x >= -4 || coor.x <= 3) && (coor.y <= 3 || coor.y >= -4):
+			if is_valid_coordinate(coor):
 				if (
 					map.get_cell_atlas_coords(layer_id, coor) == cell_map["default"]
 					|| map.get_cell_atlas_coords(layer_id, coor) == cell_map["flag"]
 				):
 					if flag_coordinates.has(coor):
+						tapped_coordinates.remove_at(tapped_coordinates.find(coor))
 						flag_coordinates.remove_at(flag_coordinates.find(coor))
 						erase_cell(layer_id, coor)
 						if mines_coordinate.has(Vector2(coor.x, coor.y)):
 							set_cell(layer_id, coor, source_id, cell_map["default"], 1)
 						else:
 							set_tile_cell(coor, cell_map["default"])
+
 					else:
 						erase_cell(layer_id, coor)
 						set_tile_cell(coor, cell_map["flag"])
 						flag_coordinates.append(coor)
+
+
+func flood_mines(start_coordinate: Vector2) -> void:
+	var stack = [start_coordinate]
+
+	while stack.size() > 0:
+		var current_coordinate = stack.pop_back()
+
+		if (
+			is_valid_coordinate(current_coordinate)
+			and not tapped_coordinates.has(current_coordinate)
+			and not flag_coordinates.has(current_coordinate)
+		):
+			tapped_coordinates.append(current_coordinate)
+			if number_map.has(current_coordinate):
+				match number_map[current_coordinate]:
+					1:
+						erase_cell(layer_id, current_coordinate)
+						set_tile_cell(current_coordinate, cell_map["1"])
+					2:
+						erase_cell(layer_id, current_coordinate)
+						set_tile_cell(current_coordinate, cell_map["2"])
+					3:
+						erase_cell(layer_id, current_coordinate)
+						set_tile_cell(current_coordinate, cell_map["3"])
+					4:
+						erase_cell(layer_id, current_coordinate)
+						set_tile_cell(current_coordinate, cell_map["4"])
+					5:
+						erase_cell(layer_id, current_coordinate)
+						set_tile_cell(current_coordinate, cell_map["5"])
+					6:
+						erase_cell(layer_id, current_coordinate)
+						set_tile_cell(current_coordinate, cell_map["6"])
+					7:
+						erase_cell(layer_id, current_coordinate)
+						set_tile_cell(current_coordinate, cell_map["7"])
+					8:
+						erase_cell(layer_id, current_coordinate)
+						set_tile_cell(current_coordinate, cell_map["8"])
+					_:
+						erase_cell(layer_id, current_coordinate)
+						set_tile_cell(current_coordinate, cell_map["blank"])
+			else:
+				update_cell(current_coordinate, "blank")
+
+				var neighbors = get_8_neighbors(current_coordinate.x, current_coordinate.y)
+				for neighbor in neighbors:
+					if is_valid_coordinate(neighbor) and not tapped_coordinates.has(neighbor):
+						stack.append(neighbor)
+
+
+func get_random_coor() -> Vector2:
+	if rows % 2 == 0:
+		return Vector2(
+			randi_range(-rows / floor(2), rows / floor(2) - 1),
+			randi_range(-columns / floor(2), columns / floor(2) - 1)
+		)
+	else:
+		return Vector2(
+			randi_range(-rows / floor(2), rows / floor(2)),
+			randi_range(-columns / floor(2), columns / floor(2))
+		)
+
+
+func is_valid_coordinate(coor: Vector2) -> bool:
+	if rows % 2 == 0:
+		return (
+			coor.x >= -rows / floor(2)
+			&& coor.x <= rows / floor(2) - 1
+			&& coor.y <= columns / floor(2) - 1
+			&& coor.y >= -columns / floor(2)
+		)
+	else:
+		return (
+			coor.x >= -rows / floor(2)
+			&& coor.x <= rows / floor(2)
+			&& coor.y <= columns / floor(2)
+			&& coor.y >= -columns / floor(2)
+		)
+
+
+func update_cell(coor: Vector2, cell_type: String) -> void:
+	erase_cell(layer_id, coor)
+	set_tile_cell(coor, cell_map[cell_type])
 
 
 func build_map() -> void:
@@ -153,99 +251,110 @@ func set_tile_cell(coor: Vector2, cell_type: Vector2i) -> void:
 
 func place_mines() -> void:
 	for i in no_of_mines:
-		var random_mine_coordinate = Vector2(
-			randi_range(-rows / 2, rows / 2 - 1), randi_range(-columns / 2, columns / 2 - 1)
-		)
+		var random_mine_coordinate = get_random_coor()
 
-		while mines_coordinate.has(random_mine_coordinate):
-			random_mine_coordinate = Vector2(
-				randi_range(-rows / 2, rows / 2 - 1), randi_range(-columns / 2, columns / 2 - 1)
-			)
+		while (
+			mines_coordinate.has(random_mine_coordinate)
+			|| Vector2(first_click_coordinate) == random_mine_coordinate
+		):
+			random_mine_coordinate = get_random_coor()
 		mines_coordinate.append(random_mine_coordinate)
+		_place_map_numbers(random_mine_coordinate)
 		erase_cell(layer_id, random_mine_coordinate)
 		set_cell(layer_id, random_mine_coordinate, source_id, cell_map["default"], 1)
 
 
-func _place_map_numbers() -> void:
-	for i in mines_coordinate.size():
-		var temp_mine_coordinate: Vector2 = mines_coordinate[i]
-		if (
-			(temp_mine_coordinate.x - 1 >= -4 || temp_mine_coordinate.x + 1 <= 3)
-			&& (temp_mine_coordinate.y + 1 <= 3 || temp_mine_coordinate.y - 1 >= -4)
-		):
-			var mine_place_coor = Vector2i(temp_mine_coordinate)
-			# mine right side
-			if number_map.has(mine_place_coor + Vector2i.RIGHT):
-				number_map[mine_place_coor + Vector2i.RIGHT] = (
-					number_map[mine_place_coor + Vector2i.RIGHT] + 1
-				)
+func _place_map_numbers(i: Vector2) -> void:
+	# for i in mines_coordinate.size():
+	var temp_mine_coordinate: Vector2 = i
+	if is_valid_coordinate(temp_mine_coordinate):
+		var mine_place_coor = Vector2i(temp_mine_coordinate)
+		# mine right side
+		if number_map.has(mine_place_coor + Vector2i.RIGHT):
+			number_map[mine_place_coor + Vector2i.RIGHT] = (
+				number_map[mine_place_coor + Vector2i.RIGHT] + 1
+			)
 
-			else:
-				number_map[mine_place_coor + Vector2i.RIGHT] = 1
+		else:
+			number_map[mine_place_coor + Vector2i.RIGHT] = 1
 
-			#mine left side
-			if number_map.has(mine_place_coor + Vector2i.LEFT):
-				number_map[mine_place_coor + Vector2i.LEFT] = (
-					number_map[mine_place_coor + Vector2i.LEFT] + 1
-				)
+		#mine left side
+		if number_map.has(mine_place_coor + Vector2i.LEFT):
+			number_map[mine_place_coor + Vector2i.LEFT] = (
+				number_map[mine_place_coor + Vector2i.LEFT] + 1
+			)
 
-			else:
-				number_map[mine_place_coor + Vector2i.LEFT] = 1
+		else:
+			number_map[mine_place_coor + Vector2i.LEFT] = 1
 
-			# mine Up side
-			if number_map.has(mine_place_coor + Vector2i.UP):
-				number_map[mine_place_coor + Vector2i.UP] = (
-					number_map[mine_place_coor + Vector2i.UP] + 1
-				)
+		# mine Up side
+		if number_map.has(mine_place_coor + Vector2i.UP):
+			number_map[mine_place_coor + Vector2i.UP] = (
+				number_map[mine_place_coor + Vector2i.UP] + 1
+			)
 
-			else:
-				number_map[mine_place_coor + Vector2i.UP] = 1
+		else:
+			number_map[mine_place_coor + Vector2i.UP] = 1
 
-			# mine Down side
-			if number_map.has(mine_place_coor + Vector2i.DOWN):
-				number_map[mine_place_coor + Vector2i.DOWN] = (
-					number_map[mine_place_coor + Vector2i.DOWN] + 1
-				)
+		# mine Down side
+		if number_map.has(mine_place_coor + Vector2i.DOWN):
+			number_map[mine_place_coor + Vector2i.DOWN] = (
+				number_map[mine_place_coor + Vector2i.DOWN] + 1
+			)
 
-			else:
-				number_map[mine_place_coor + Vector2i.DOWN] = 1
+		else:
+			number_map[mine_place_coor + Vector2i.DOWN] = 1
 
-			# mine right up diagonal
-			if number_map.has(Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)):
-				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)] = (
-					number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)] + 1
-				)
+		# mine right up diagonal
+		if number_map.has(Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)):
+			number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)] = (
+				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)] + 1
+			)
 
-			else:
-				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)] = 1
+		else:
+			number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y - 1)] = 1
 
-			# mine right down diagonal
-			if number_map.has(Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)):
-				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)] = (
-					number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)] + 1
-				)
+		# mine right down diagonal
+		if number_map.has(Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)):
+			number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)] = (
+				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)] + 1
+			)
 
-			else:
-				number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)] = 1
+		else:
+			number_map[Vector2i(mine_place_coor.x + 1, mine_place_coor.y + 1)] = 1
 
-			# mine left up diagonal
-			if number_map.has(Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)):
-				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)] = (
-					number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)] + 1
-				)
+		# mine left up diagonal
+		if number_map.has(Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)):
+			number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)] = (
+				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)] + 1
+			)
 
-			else:
-				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)] = 1
+		else:
+			number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y - 1)] = 1
 
-			# mine left down diagonal
-			if number_map.has(Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)):
-				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)] = (
-					number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)] + 1
-				)
+		# mine left down diagonal
+		if number_map.has(Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)):
+			number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)] = (
+				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)] + 1
+			)
 
-			else:
-				number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)] = 1
+		else:
+			number_map[Vector2i(mine_place_coor.x - 1, mine_place_coor.y + 1)] = 1
 
 
 func _on_button_pressed():
 	_restart()
+
+
+func get_8_neighbors(x, y):
+	var neighbors = [
+		Vector2i(x - 1, y),  # Left
+		Vector2i(x + 1, y),  # Right
+		Vector2i(x, y - 1),  # Up
+		Vector2i(x, y + 1),  # Down
+		Vector2i(x - 1, y - 1),  # Up-Left
+		Vector2i(x - 1, y + 1),  # Down-Left
+		Vector2i(x + 1, y - 1),  # Up-Right
+		Vector2i(x + 1, y + 1)  # Down-Right
+	]
+	return neighbors
