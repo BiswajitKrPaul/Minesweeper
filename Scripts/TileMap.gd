@@ -153,15 +153,13 @@ func on_mouse_click() -> void:
 						flag_coordinates.append(coor)
 
 
-func flood_mines(start_coordinate: Vector2) -> void:
+func flood_mines(start_coordinate: Vector2i) -> void:
 	var stack = [start_coordinate]
 
 	while stack.size() > 0:
 		var current_coordinate = stack.pop_back()
-
 		if (
 			is_valid_coordinate(current_coordinate)
-			and not tapped_coordinates.has(current_coordinate)
 			and not flag_coordinates.has(current_coordinate)
 		):
 			tapped_coordinates.append(current_coordinate)
@@ -265,7 +263,6 @@ func place_mines() -> void:
 
 
 func _place_map_numbers(i: Vector2) -> void:
-	# for i in mines_coordinate.size():
 	var temp_mine_coordinate: Vector2 = i
 	if is_valid_coordinate(temp_mine_coordinate):
 		var mine_place_coor = Vector2i(temp_mine_coordinate)
