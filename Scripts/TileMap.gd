@@ -129,8 +129,40 @@ func on_mouse_click() -> void:
 							erase_cell(layer_id, coor)
 							set_tile_cell(coor, cell_map["blank"])
 							flood_mines(coor)
+			else:
+				if is_valid_coordinate(coor) and tapped_coordinates.has(coor):
+					if number_map.has(coor):
+						match number_map[coor]:
+							1:
+								var neighbor_coor = get_8_neighbors(coor.x, coor.y)
+								var _not_in_tapped_coor:Array = neighbor_coor.filter(not_in(tapped_coordinates))
+								if  _not_in_tapped_coor.size() > 0 :
+									var _flag_coor = _not_in_tapped_coor.filter(are_in(flag_coordinates))
+									var _mine_coor = _flag_coor.filter(are_in(toVector2i(mines_coordinate)))
+									print(_flag_coor)
+									print(_mine_coor)
+									if _flag_coor.size() == _mine_coor.size():
+										flood_mines(coor)
+								
 
-	if Input.is_action_just_pressed("on_right_click"):
+							2:
+								print("2")
+							3:
+								print("3")
+							4:
+								print("4")
+							5:
+								print("5")
+							6:
+								print("6")
+							7:
+								print("7")
+							8:
+								print("8")
+							_:
+								print("blank")
+
+	if Input.is_action_just_pressed("on_right_click") and clickedOnce == true:
 		var coor: Vector2i = map.local_to_map(get_local_mouse_position())
 		if map.get_cell_atlas_coords(layer_id, coor) != Vector2i(-1, -1):
 			if is_valid_coordinate(coor):
@@ -138,7 +170,7 @@ func on_mouse_click() -> void:
 					map.get_cell_atlas_coords(layer_id, coor) == cell_map["default"]
 					|| map.get_cell_atlas_coords(layer_id, coor) == cell_map["flag"]
 				):
-					if flag_coordinates.has(coor):
+					if flag_coordinates.has(coor) and tapped_coordinates.has(coor):
 						tapped_coordinates.remove_at(tapped_coordinates.find(coor))
 						flag_coordinates.remove_at(flag_coordinates.find(coor))
 						erase_cell(layer_id, coor)
@@ -146,22 +178,35 @@ func on_mouse_click() -> void:
 							set_cell(layer_id, coor, source_id, cell_map["default"], 1)
 						else:
 							set_tile_cell(coor, cell_map["default"])
-
 					else:
 						erase_cell(layer_id, coor)
 						set_tile_cell(coor, cell_map["flag"])
 						flag_coordinates.append(coor)
+						tapped_coordinates.append(coor)
 
+
+
+func not_in(exclude_values):
+	return func(element):
+		return not element in exclude_values
+		
+func are_in(exclude_values):
+	return func(element):
+		return element in exclude_values
+		
+func toVector2i(old_values:Array[Vector2]) -> Array[Vector2i]:
+	var tempArray : Array[Vector2i] = []
+	for value in old_values:
+		tempArray.append(Vector2i(value))
+	return tempArray
 
 func flood_mines(start_coordinate: Vector2i) -> void:
 	var stack = [start_coordinate]
 
 	while stack.size() > 0:
 		var current_coordinate = stack.pop_back()
-		if (
-			is_valid_coordinate(current_coordinate)
-			and not flag_coordinates.has(current_coordinate)
-		):
+		print(is_valid_coordinate(current_coordinate) and not flag_coordinates.has(current_coordinate))
+		if is_valid_coordinate(current_coordinate) and not flag_coordinates.has(current_coordinate):
 			tapped_coordinates.append(current_coordinate)
 			if number_map.has(current_coordinate):
 				match number_map[current_coordinate]:
